@@ -1,0 +1,22 @@
+behaviors:
+  GoalShooting:
+    trainer_type: ppo
+    time_horizon: 32
+    max_steps: 1e6
+    hyperparameters:
+      learning_rate: 1e-4
+      batch_size: 2048
+      buffer_size: 50000 # Typical range: PPO: 2048 - 409600; SAC: 50000 - 1000000
+      num_epoch: 3
+    network_settings:
+      normalize: true
+      num_layers: 3
+      hidden_units: 256
+    reward_signals:
+      extrinsic:
+        gamma: 0.9
+        strength: 1.0
+    summary_freq: 2000
+    threaded: true
+torch_settings:
+  device: cpu
