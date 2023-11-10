@@ -75,13 +75,13 @@ public class GoalShootingAgent : Agent
 
         if(isCloseToGoal && kicked && isStopped)
         {
-            AddReward(1f);
-            Debug.Log("+" + 1);
+            AddReward(0.5f);
         }
         else if (kicked && isStopped)
         {
             AddReward(-0.1f);
         }
+        AddReward(-0.1f / MaxStep);
     }
 
     private bool IsStopped()
@@ -122,7 +122,7 @@ public class GoalShootingAgent : Agent
     public void GoalTriggered()
     {
         // The ball hits the gameobject which has goal tag on it
-        AddReward(2f);
+        AddReward(1f);
         ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
         ballRigidbody.velocity = new Vector3(0, 0, 0);
         EndEpisode();
