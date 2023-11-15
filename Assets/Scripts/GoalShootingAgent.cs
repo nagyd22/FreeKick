@@ -15,23 +15,23 @@ public class GoalShootingAgent : Agent
     private Transform ballTransform;
     private Rigidbody ballRigidbody;
 
-    private float initialDistance;
+    private const float maxDistance = 22f;
 
     private bool kicked;
+    private bool episodeHasBegun;
 
     public override void OnEpisodeBegin()
     {
+        episodeHasBegun = true;
         ballTransform = ball.transform;
         ballRigidbody = ball.GetComponent<Rigidbody>();
-        ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
-        ballRigidbody.velocity = new Vector3(0, 0, 0);
 
         // 3 fixed place where the agent will start to help the training
         Vector3[] possibleStartPositions = new Vector3[]
         {
-        new Vector3(10, -3, -22),
-        new Vector3(-10, -3, -22),
-        new Vector3(0, -3, -22)
+        new Vector3(10, -3, -20),
+        new Vector3(-10, -3, -20),
+        new Vector3(0, -3, -20)
         };
 
         int choosenStartingPoint = UnityEngine.Random.Range(0, possibleStartPositions.Length);
@@ -39,49 +39,83 @@ public class GoalShootingAgent : Agent
 
         // Assign the shooter and the ball to the random position
         transform.localPosition = startPosition;
-        ballTransform.localPosition = new Vector3(startPosition.x, 0.65f, startPosition.z - 0.7f);
+        ballTransform.localPosition = new Vector3(startPosition.x, -3.36f, startPosition.z - 0.7f);
+        ballRigidbody.velocity = new Vector3(0, 0, 0);
+        ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
+        ballRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
 
         // Assign the boundary behind the shooter
-        boundaryBehind.transform.localPosition = new Vector3(boundaryBehind.transform.localPosition.x, boundaryBehind.transform.localPosition.y, startPosition.z + 3f);
+        boundaryBehind.transform.localPosition = new Vector3(boundaryBehind.transform.localPosition.x, boundaryBehind.transform.localPosition.y, startPosition.z + 2f);
 
-        initialDistance = Vector3.Distance(ballTransform.localPosition, transform.localPosition);
         kicked = false;
     }
     public override void CollectObservations(VectorSensor sensor)
     {
-        // The position of the ball
-        sensor.AddObservation(ballTransform.localPosition.x);
-        sensor.AddObservation(ballTransform.localPosition.y);
-
         // The position of the football gate
         sensor.AddObservation(targetTransform.localPosition.x);
-        sensor.AddObservation(targetTransform.localPosition.y);
+        sensor.AddObservation(targetTransform.localPosition.z);
+
+        // The position of the player
+        sensor.AddObservation(transform.localPosition.x);
+        sensor.AddObservation(transform.localPosition.z);
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
         var actionTaken = actions.ContinuousActions;
 
-        float actionXRotate = actionTaken[0];
+        float actionXRotate = Math.Clamp(actionTaken[0], 0, 1);
         float actionYRotate = actionTaken[1];
-        float actionPower = actionTaken[2];
+        float actionPower = Math.Clamp(actionTaken[2], 0, 1);
 
-        float angleX = actionXRotate * 40f;
-        float angleY = actionYRotate * 60f;
-        float strength = actionPower * 10f;
+        float angleX = actionXRotate * 30f;
+        float angleY = actionYRotate * 50f;
+        float strength = actionPower * 12f;
         KickBall(angleX, angleY, strength);
 
-        bool isCloseToGoal = IsCloseToGoal();
-        bool isStopped = IsStopped();
+    }
 
-        if(isCloseToGoal && kicked && isStopped)
+    private void FixedUpdate()
+    {
+        if(episodeHasBegun)
         {
-            AddReward(0.5f);
+            bool isStopped = IsStopped();
+            bool isCloseToGoal = IsCloseToGoal();
+            bool isReallyCloseToGoal = IsReallyCloseToGoal();
+            bool isCloseToPlayer = IsCloseToPlayer();
+
+            float distance_scaled = Vector3.Distance(targetTransform.localPosition, ballTransform.localPosition) / maxDistance;
+
+            if (isReallyCloseToGoal && kicked && isStopped)
+            {
+                AddReward(0.6f);
+                OnEndEpisode();
+            }
+            else if (kicked && isStopped && isCloseToGoal) {
+                AddReward(0.3f);
+                OnEndEpisode();
+            }
+            else if (kicked && isStopped)
+            {
+                if (isCloseToPlayer)
+                {
+                    AddReward((-distance_scaled / 10) * 2);
+                }
+                else
+                {
+                    AddReward(-distance_scaled / 10);
+                }
+                IsGoodAngle();
+                OnEndEpisode();
+            }
+
+            if (ballTransform.localPosition.y < -5)
+            {
+                AddReward(-1);
+                OnEndEpisode();
+            }
         }
-        else if (kicked && isStopped)
-        {
-            AddReward(-0.1f);
-        }
-        AddReward(-0.1f / MaxStep);
+
+
     }
 
     private bool IsStopped()
@@ -95,11 +129,10 @@ public class GoalShootingAgent : Agent
 
     private void KickBall(float angleX, float angleY, float strength)
     {
-        float actualDistance = Vector3.Distance(ballTransform.localPosition, transform.localPosition);
-
-        if (initialDistance + 0.01 >= actualDistance)
+        if (!kicked)
         {
             kicked = true;
+            ballRigidbody.constraints = RigidbodyConstraints.None;
             // Apply rotations around both X and Y axes to the ballTransform
             ballTransform.localRotation = Quaternion.Euler(-angleX, angleY, 0);
 
@@ -112,28 +145,55 @@ public class GoalShootingAgent : Agent
         else return;
     }
 
+    private void IsGoodAngle()
+    {
+        float angleToGoal = Vector3.SignedAngle(ballTransform.localPosition - transform.localPosition, targetTransform.localPosition - transform.localPosition, Vector3.up);
+        float angleReward = 1f - Mathf.Abs(angleToGoal) / 75f;
+
+        AddReward(angleReward);
+        OnEndEpisode();
+    }
+
+    private bool IsCloseToPlayer()
+    {
+        bool isCloseToPlayer = Vector3.Distance(ballTransform.localPosition, transform.localPosition) < 3f;
+
+        return isCloseToPlayer;
+    }
+
     private bool IsCloseToGoal()
     {
-        bool isCloseToTarget = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition) < 3.5f;
+        bool isCloseToTarget = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition) < 8f;
 
         return isCloseToTarget;
+    }
+
+    private bool IsReallyCloseToGoal()
+    {
+        bool isReallyCloseToGoal = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition) < 4f;
+
+        return isReallyCloseToGoal;
     }
 
     public void GoalTriggered()
     {
         // The ball hits the gameobject which has goal tag on it
         AddReward(1f);
-        ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
-        ballRigidbody.velocity = new Vector3(0, 0, 0);
-        EndEpisode();
+        OnEndEpisode();
     }
 
     public void BoundaryTriggered()
     {
         // The ball hits one of the gameobjects which has boundary tag on it
-        AddReward(-1f);
+        AddReward(-0.3f);
+        OnEndEpisode();
+    }
+
+    public void OnEndEpisode()
+    {
         ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
         ballRigidbody.velocity = new Vector3(0, 0, 0);
+        episodeHasBegun = false;
         EndEpisode();
     }
 

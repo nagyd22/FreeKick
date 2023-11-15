@@ -1,20 +1,20 @@
 behaviors:
   FreeKick:
     trainer_type: ppo
-    time_horizon: 32
-    max_steps: 1800
+    time_horizon: 256
+    max_steps: 1e6
     hyperparameters:
-      learning_rate: 1e-5
+      learning_rate: 3e-4
       batch_size: 2048
-      buffer_size: 50000 # Typical range: PPO: 2048 - 409600; SAC: 50000 - 1000000
+      buffer_size: 50000
       num_epoch: 3
     network_settings:
       normalize: true
       num_layers: 3
-      hidden_units: 256
+      hidden_units: 512
     reward_signals:
       extrinsic:
-        gamma: 0.9
+        gamma: 0.99
         strength: 1.0
     summary_freq: 5000
     threaded: true
