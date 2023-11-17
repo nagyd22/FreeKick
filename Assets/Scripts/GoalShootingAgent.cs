@@ -15,7 +15,7 @@ public class GoalShootingAgent : Agent
     private Transform ballTransform;
     private Rigidbody ballRigidbody;
 
-    private const float maxDistance = 22f;
+    private const float maxDistance = 20f;
 
     private bool kicked;
     private bool episodeHasBegun;
@@ -34,6 +34,7 @@ public class GoalShootingAgent : Agent
         new Vector3(0, -3, -20)
         };
 
+        // Choose a place for the player randomly
         int choosenStartingPoint = UnityEngine.Random.Range(0, possibleStartPositions.Length);
         Vector3 startPosition = possibleStartPositions[choosenStartingPoint];
 
@@ -76,48 +77,41 @@ public class GoalShootingAgent : Agent
 
     private void FixedUpdate()
     {
+        //FixedUpdate is called before OnEpisodeBegin too. In this way there won't be null reference
         if(episodeHasBegun)
         {
             bool isStopped = IsStopped();
-            bool isCloseToGoal = IsCloseToGoal();
-            bool isReallyCloseToGoal = IsReallyCloseToGoal();
             bool isCloseToPlayer = IsCloseToPlayer();
 
-            float distance_scaled = Vector3.Distance(targetTransform.localPosition, ballTransform.localPosition) / maxDistance;
+            float distanceToGoal = Vector3.Distance(targetTransform.localPosition, ballTransform.localPosition);
+            float distanceReward = 1f - Mathf.Clamp01(distanceToGoal / maxDistance);
 
-            if (isReallyCloseToGoal && kicked && isStopped)
-            {
-                AddReward(0.6f);
-                OnEndEpisode();
-            }
-            else if (kicked && isStopped && isCloseToGoal) {
-                AddReward(0.3f);
-                OnEndEpisode();
-            }
-            else if (kicked && isStopped)
+            if (isStopped)
             {
                 if (isCloseToPlayer)
                 {
-                    AddReward((-distance_scaled / 10) * 2);
+                    AddReward(-1);
                 }
                 else
                 {
-                    AddReward(-distance_scaled / 10);
+                    AddReward(distanceReward);
                 }
-                IsGoodAngle();
                 OnEndEpisode();
             }
 
+            //If the ball leaves the playable area without touching the boundarys give negative reward and end the episode
             if (ballTransform.localPosition.y < -5)
             {
                 AddReward(-1);
                 OnEndEpisode();
             }
         }
-
-
     }
 
+    /// <summary>
+    /// Returns a true/false value whether the ball stopped or not after the kick
+    /// </summary>
+    /// <returns>True if the ball is stopped and False if the ball is still moving or rotating</returns>
     private bool IsStopped()
     {
         if (kicked && ballRigidbody.IsSleeping())
@@ -127,6 +121,12 @@ public class GoalShootingAgent : Agent
         else { return false; }
     }
 
+    /// <summary>
+    /// Kick the ball with the rigidbody's AddForce method with two rotation and the strength when it wasn't already kicked in this episode
+    /// </summary>
+    /// <param name="angleX">The angle of rotation along the X axis</param>
+    /// <param name="angleY">The angle of rotation along the Y axis</param>
+    /// <param name="strength">The force we kick the ball with</param>
     private void KickBall(float angleX, float angleY, float strength)
     {
         if (!kicked)
@@ -145,15 +145,7 @@ public class GoalShootingAgent : Agent
         else return;
     }
 
-    private void IsGoodAngle()
-    {
-        float angleToGoal = Vector3.SignedAngle(ballTransform.localPosition - transform.localPosition, targetTransform.localPosition - transform.localPosition, Vector3.up);
-        float angleReward = 1f - Mathf.Abs(angleToGoal) / 75f;
-
-        AddReward(angleReward);
-        OnEndEpisode();
-    }
-
+    //The agent won't just barely touch the ball and go to the next episode
     private bool IsCloseToPlayer()
     {
         bool isCloseToPlayer = Vector3.Distance(ballTransform.localPosition, transform.localPosition) < 3f;
@@ -161,34 +153,27 @@ public class GoalShootingAgent : Agent
         return isCloseToPlayer;
     }
 
-    private bool IsCloseToGoal()
-    {
-        bool isCloseToTarget = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition) < 8f;
-
-        return isCloseToTarget;
-    }
-
-    private bool IsReallyCloseToGoal()
-    {
-        bool isReallyCloseToGoal = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition) < 4f;
-
-        return isReallyCloseToGoal;
-    }
-
+    /// <summary>
+    /// The ball hits the gameobject which has goal tag on it
+    /// </summary>
     public void GoalTriggered()
     {
-        // The ball hits the gameobject which has goal tag on it
         AddReward(1f);
         OnEndEpisode();
     }
 
+    /// <summary>
+    /// The ball hits one of the gameobjects which has boundary tag on it
+    /// </summary>
     public void BoundaryTriggered()
     {
-        // The ball hits one of the gameobjects which has boundary tag on it
         AddReward(-0.3f);
         OnEndEpisode();
     }
 
+    /// <summary>
+    /// Set the rotation and velocity of the ball to 0
+    /// </summary>
     public void OnEndEpisode()
     {
         ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
@@ -196,5 +181,4 @@ public class GoalShootingAgent : Agent
         episodeHasBegun = false;
         EndEpisode();
     }
-
 }
