@@ -70,8 +70,9 @@ public class GoalShootingAgent : Agent
 
         float angleX = actionXRotate * 30f;
         float angleY = actionYRotate * 50f;
-        float strength = actionPower * 12f;
+        float strength = actionPower * 20f;
         KickBall(angleX, angleY, strength);
+        
 
     }
 

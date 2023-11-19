@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 7733c6ee3b9adda4a8b61ed30038c9a6, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.44657874, g: 0.49641258, b: 0.5748172, a: 1}
+  m_IndirectSpecularColor: {r: 0.6535155, g: 0.69300425, b: 0.70742565, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -97,8 +97,8 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
-  m_LightingSettings: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 78ef1bf574b965f4c8de12176d7be7c0, type: 2}
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 89d958d405622bf4ca7d6d2c133bfc1f, type: 2}
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -573,6 +573,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 551024251455464022, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 5022602860645237092, guid: 4028adbc42b74cd43937f0ce42a30f17, type: 3}
+    - target: {fileID: 551024251455464022, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
       propertyPath: m_BehaviorType
       value: 0
       objectReference: {fileID: 0}
@@ -583,6 +587,18 @@ PrefabInstance:
     - target: {fileID: 5670532288354767807, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
       propertyPath: m_Name
       value: Behind
+      objectReference: {fileID: 0}
+    - target: {fileID: 6199985840336628940, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6.07
+      objectReference: {fileID: 0}
+    - target: {fileID: 6199985840336628940, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 9.18
+      objectReference: {fileID: 0}
+    - target: {fileID: 6199985840336628940, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 10.51
       objectReference: {fileID: 0}
     - target: {fileID: 6478077657675481818, guid: 30264618e902eb94a9d40f9f0ed7da6e, type: 3}
       propertyPath: m_LocalPosition.x
