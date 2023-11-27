@@ -11,11 +11,14 @@ public class GoalShootingAgent : Agent
     public GameObject ball;
     public GameObject boundaryBehind;
 
+    public float maxDistance;
+    public float timeToEndEpisode;
+    public float timeSinceDecision;
+
+
     [SerializeField] private Transform targetTransform;
     private Transform ballTransform;
     private Rigidbody ballRigidbody;
-
-    private const float maxDistance = 20f;
 
     private bool kicked;
     private bool episodeHasBegun;
@@ -45,9 +48,12 @@ public class GoalShootingAgent : Agent
         ballRigidbody.rotation = Quaternion.Euler(0, 0, 0);
         ballRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
 
+        maxDistance = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition);
+
         // Assign the boundary behind the shooter
         boundaryBehind.transform.localPosition = new Vector3(boundaryBehind.transform.localPosition.x, boundaryBehind.transform.localPosition.y, startPosition.z + 2f);
 
+        RequestDecision();
         kicked = false;
     }
     public override void CollectObservations(VectorSensor sensor)
@@ -64,16 +70,46 @@ public class GoalShootingAgent : Agent
     {
         var actionTaken = actions.ContinuousActions;
 
-        float actionXRotate = Math.Clamp(actionTaken[0], 0, 1);
+        float actionXRotate = (actionTaken[0] + 1) / 2;
         float actionYRotate = actionTaken[1];
-        float actionPower = Math.Clamp(actionTaken[2], 0, 1);
+        float actionPower = (actionTaken[2] + 1) / 2;
 
-        float angleX = actionXRotate * 30f;
-        float angleY = actionYRotate * 50f;
-        float strength = actionPower * 20f;
+        float angleX = actionXRotate * 20;
+        float angleY = actionYRotate * 40;
+        float strength = actionPower * 12;
+
         KickBall(angleX, angleY, strength);
-        
 
+
+    }
+
+    private void WaitTimeUntillEndOfEpisode()
+    {
+        if(timeSinceDecision >= timeToEndEpisode)
+        {
+            timeSinceDecision = 0;
+            AddReward(-1f);
+            OnEndEpisode();
+        } else
+        {
+            timeSinceDecision += Time.fixedDeltaTime;
+        }
+    }
+
+    public override void Heuristic(in ActionBuffers actionsOut)
+    {
+        ActionSegment<float> actions = actionsOut.ContinuousActions;
+
+        RequestDecision();
+        actions[0] = 0;
+        actions[1] = 0f;
+        actions[2] = 1f;
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            RequestDecision();
+            actions[2] = 1;
+        }
     }
 
     private void FixedUpdate()
@@ -81,11 +117,9 @@ public class GoalShootingAgent : Agent
         //FixedUpdate is called before OnEpisodeBegin too. In this way there won't be null reference
         if(episodeHasBegun)
         {
+            WaitTimeUntillEndOfEpisode();
             bool isStopped = IsStopped();
             bool isCloseToPlayer = IsCloseToPlayer();
-
-            float distanceToGoal = Vector3.Distance(targetTransform.localPosition, ballTransform.localPosition);
-            float distanceReward = 1f - Mathf.Clamp01(distanceToGoal / maxDistance);
 
             if (isStopped)
             {
@@ -95,6 +129,10 @@ public class GoalShootingAgent : Agent
                 }
                 else
                 {
+                    float distanceToGoal = Vector3.Distance(ballTransform.localPosition, targetTransform.localPosition);
+                    float distanceReward = Mathf.Clamp01(maxDistance / distanceToGoal);
+                    Debug.Log(distanceToGoal);
+                    Debug.Log(distanceReward);
                     AddReward(distanceReward);
                 }
                 OnEndEpisode();
@@ -139,7 +177,7 @@ public class GoalShootingAgent : Agent
 
             // Calculate the direction and force
             Vector3 kickDirection = ballTransform.forward;
-            Vector3 kickForce = kickDirection * strength;
+            Vector3 kickForce = -kickDirection * strength;
 
             ballRigidbody.AddForce(kickForce, ForceMode.Impulse);
         }
@@ -168,7 +206,7 @@ public class GoalShootingAgent : Agent
     /// </summary>
     public void BoundaryTriggered()
     {
-        AddReward(-0.3f);
+        AddReward(-0.5f);
         OnEndEpisode();
     }
 
